@@ -16,7 +16,7 @@
 // limitations under the License.
 ///////////////////////////////////////////////////////////////////////////////
 
-module r5p_lsu
+module test_union
   import riscv_isa_pkg::*;
 (
   // instruction input
@@ -37,4 +37,4 @@ assign rs1 = dec.r.rs1;
 assign rs2 = dec.r.rs2;
 assign imm = dec.i.imm_11_0;
 
-endmodule: r5p_lsu
+endmodule: test_union
