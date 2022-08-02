@@ -7,7 +7,7 @@ plugin -i systemverilog
 
 # SystemVerilog RTL
 read_systemverilog -top test_union \
--parse riscv_isa_pkg.sv test_union.sv
+-parse riscv_isa_pkg.sv riscv_isa_c_pkg.sv test_union.sv
 
 synth_xilinx -top test_union -edif top.edif
 
