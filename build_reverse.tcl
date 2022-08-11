@@ -5,16 +5,16 @@
 
 plugin -i systemverilog
 
-#+define+LANGUAGE_UNSUPPORTED_ARRAY_ASSIGNMENT_PATTERN \
+#+define+LANGUAGE_UNSUPPORTED_STREAM_OPERATOR \
 
 # SystemVerilog RTL
 read_systemverilog \
--top r5p_gpr \
--parse r5p_gpr.sv
+-top test_reverse \
+-parse test_reverse.sv
 
-synth_xilinx -top r5p_gpr -edif top.edif
+synth_xilinx -top test_reverse -edif top.edif
 
-#hierarchy -top r5p_gpr
+#hierarchy -top test_reverse
 
 #write_ilang
 
