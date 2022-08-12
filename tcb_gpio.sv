@@ -47,34 +47,21 @@ endgenerate
 // clock domain crossing
 ////////////////////////////////////////////////////////////////////////////////
 
-  // read value
-  logic [GW-1:0] gpio_r;
-
-  // bypass CDC code
-  assign gpio_r = gpio_i;
-
 ////////////////////////////////////////////////////////////////////////////////
 // TCB access
 ////////////////////////////////////////////////////////////////////////////////
 
-  logic [bus.DW-1:0] bus_rdt;
-
-  // GPIO output/enable registers and GPIO input are decoded
-  always_comb
-  case (bus.adr[2+2-1:0])
-    4'h0:    bus_rdt = gpio_o;
-    4'h4:    bus_rdt = gpio_e;
-    4'h8:    bus_rdt = gpio_r;
-    default: bus_rdt = 'x;
-  endcase
-
   always_ff @(posedge bus.clk, posedge bus.rst)
   if (bus.rst) begin
     bus.rdt <= '0;
-//  end else if (bus.trn) begin
-  end else if (bus.vld & bus.rdy) begin
+  end else if (bus.trn) begin
     if (~bus.wen) begin
-      bus.rdt <= bus_rdt;
+      case (bus.adr[2+2-1:0])
+        4'h0:    bus.rdt <= gpio_o;
+        4'h4:    bus.rdt <= gpio_e;
+        4'h8:    bus.rdt <= gpio_i;
+        default: bus.rdt <= 'x;
+      endcase
     end
   end
 
@@ -83,20 +70,14 @@ endgenerate
   if (bus.rst) begin
     gpio_o <= '0;
     gpio_e <= '0;
-//  end else if (bus.trn) begin
-  end else if (bus.vld & bus.rdy) begin
+  end else if (bus.trn) begin
     if (bus.wen) begin
       // write access
-`ifdef TEST_UNSUPPORTED
-      gpio_o <= bus.wdt[GW-1:0];
-      gpio_e <= bus.wdt[GW-1:0];
-`else
       case (bus.adr[2+2-1:0])
         4'h0:    gpio_o <= bus.wdt[GW-1:0];
         4'h4:    gpio_e <= bus.wdt[GW-1:0];
         default: ;  // do nothing
       endcase
-`endif
     end
   end
 
