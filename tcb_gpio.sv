@@ -22,13 +22,7 @@
 
 module tcb_gpio #(
   // GPIO parameters
-  int unsigned GW = 32,   // GPIO width
-  int unsigned CFG_CDC = 2,     // implement clock domain crossing stages (0 - bypass)
-  // TCB parameters
-  bit          CFG_RSP_REG = 1'b1,  // register response path (by default the response is registered giving a DLY of 1)
-  bit          CFG_RSP_MIN = 1'b0,  // minimalistic response implementation
-  // implementation device (ASIC/FPGA vendor/device)
-  string       CHIP = ""
+  int unsigned GW = 32  // GPIO width
 )(
   // GPIO signals
   output logic [GW-1:0] gpio_o,
@@ -56,67 +50,12 @@ endgenerate
   // read value
   logic [GW-1:0] gpio_r;
 
-generate
-if (CFG_CDC > 0) begin: gen_cdc
-
-  // GPIO input synchronizer
-  if ((CHIP == "ARTIX_XPM") || (CHIP == "ARTIX_GEN")) begin: gen_artix
-
-    // xpm_cdc_array_single: Single-bit Array Synchronizer
-    // Xilinx Parameterized Macro, version 2021.2
-    xpm_cdc_array_single #(
-     .DEST_SYNC_FF   (CFG_CDC),  // DECIMAL; range: 2-10
-     .INIT_SYNC_FF   (0),        // DECIMAL; 0=disable simulation init values, 1=enable simulation init values
-     .SIM_ASSERT_CHK (0),        // DECIMAL; 0=disable simulation messages, 1=enable simulation messages
-     .SRC_INPUT_REG  (0),        // DECIMAL; 0=do not register input, 1=register input
-     .WIDTH          (GW)        // DECIMAL; range: 1-1024
-    ) gpio_cdc (
-     .src_clk  (bus.clk),
-     .src_in   (gpio_i),
-     .dest_clk (bus.clk),
-     .dest_out (gpio_r)
-    );
-
-  end: gen_artix
-  else begin: gen_default
-
-    // temporary signal for synchronization
-    logic [CFG_CDC-2:0][GW-1:0] gpio_t;
-
-    // asynchronous input synchronization
-    always_ff @(posedge bus.clk, posedge bus.rst)
-    if (bus.rst) begin
-      {gpio_r, gpio_t} <= '0;
-    end else begin
-      {gpio_r, gpio_t} <= {gpio_t, gpio_i};
-    end
-
-  end: gen_default
-
-end: gen_cdc
-else begin: gen_nocdc
-
   // bypass CDC code
   assign gpio_r = gpio_i;
-
-end: gen_nocdc
-endgenerate
 
 ////////////////////////////////////////////////////////////////////////////////
 // TCB access
 ////////////////////////////////////////////////////////////////////////////////
-
-// read access
-generate
-// minimalistic implementation
-if (CFG_RSP_MIN) begin: gen_rsp_min
-
-  // only the GPIO input can be read
-  assign bus.rdt = gpio_r;
-
-end: gen_rsp_min
-// normal implementation
-else begin: gen_rsp_nrm
 
   logic [bus.DW-1:0] bus_rdt;
 
@@ -129,35 +68,23 @@ else begin: gen_rsp_nrm
     default: bus_rdt = 'x;
   endcase
 
-  // read data response is registered
-  if (CFG_RSP_REG) begin: gen_rsp_reg
-
-    always_ff @(posedge bus.clk, posedge bus.rst)
-    if (bus.rst) begin
-      bus.rdt <= '0;
-    end else if (bus.trn ) begin
-      if (~bus.wen) begin
-        bus.rdt <= bus_rdt;
-      end
+  always_ff @(posedge bus.clk, posedge bus.rst)
+  if (bus.rst) begin
+    bus.rdt <= '0;
+//  end else if (bus.trn) begin
+  end else if (bus.vld & bus.rdy) begin
+    if (~bus.wen) begin
+      bus.rdt <= bus_rdt;
     end
-
-  end: gen_rsp_reg
-  // read data response is combinational
-  else begin: gen_rsp_cmb
-    
-    assign bus.rdt = bus_rdt;
-
-  end: gen_rsp_cmb
-
-end: gen_rsp_nrm
-endgenerate
+  end
 
   // write output and output enable
   always_ff @(posedge bus.clk, posedge bus.rst)
   if (bus.rst) begin
     gpio_o <= '0;
     gpio_e <= '0;
-  end else if (bus.trn) begin
+//  end else if (bus.trn) begin
+  end else if (bus.vld & bus.rdy) begin
     if (bus.wen) begin
       // write access
 `ifdef TEST_UNSUPPORTED
